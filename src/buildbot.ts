@@ -113,9 +113,13 @@ export class Buildbot {
                         if (!error) {
                             throw Error();
                         }
-                        message = Object.entries(error.message)
+                        if (error.message instanceof String) {
+                            message = error.message;
+                        } else {
+                            message = Object.entries(error.message)
                             .map((e) => `${e[0]}: ${e[1]}`)
                             .join("; ");
+                        }
                     } catch {
                         throw Error(resp.statusText);
                     }
@@ -128,24 +132,27 @@ export class Buildbot {
                 if (this.password === null || this.password === undefined) {
                     break;
                 }
-
                 askPass = true;
+
                 this.headers = {};
 
                 if (resp.status === 401) {
                     this.headers["Authorization"] = computeAuth(resp, this.user, this.password, method ? method : "GET");
+                    resp = await this.fetch(`${this.url}/`, {
+                        headers: this.headers,
+                    });
                 } else {
                     const auth = computeAuth(await this.fetch(`${this.url}/auth/login`), this.user, this.password);
-                    let lresp = await this.fetch(`${this.url}/auth/login`, {
+                    resp = await this.fetch(`${this.url}/auth/login`, {
                         headers: { Authorization: auth },
                         redirect: "manual",
                     });
-                    if (lresp.ok || nodeFetch.isRedirect(lresp.status)) {
-                        const cookies = lresp.headers.raw()["set-cookie"];
-                        const cookie = cookies?.reverse().find((c) => c.startsWith("TWISTED_SESSION="));
-                        if (cookie) {
-                            this.headers["Cookie"] = cookie.split("; ")[0];
-                        }
+                }
+                if (resp.ok || nodeFetch.isRedirect(resp.status)) {
+                    const cookies = resp.headers.raw()["set-cookie"];
+                    const cookie = cookies?.reverse().find((c) => c.startsWith("TWISTED_SESSION="));
+                    if (cookie) {
+                        this.headers["Cookie"] = cookie.split("; ")[0];
                     }
                 }
             }
@@ -327,7 +334,7 @@ export class Buildbot {
             const start = {
                 alwaysShow: true,
                 label: "$(run-all) Start Build",
-                detail: "Click here force the build or select a parameter to change",
+                detail: "Click here to force the build or select a parameter to change",
             };
             picks.splice(0, 0, start);
 
@@ -339,9 +346,12 @@ export class Buildbot {
                 if (pick === start) {
                     break;
                 }
-                pick.description = await vscode.window.showInputBox({
+                const description = await vscode.window.showInputBox({
                     prompt: `Enter ${pick.original_label}...`,
                 });
+                if (description !== undefined) {
+                    pick.description = description;
+                }
                 pick.label = `${pick.original_label}${pick.required && !pick.description ? "$(warning)" : ""}`;
             }
 
@@ -358,7 +368,7 @@ export class Buildbot {
         if (
             await this.request(`forceschedulers/${scheduler.name}`, {
                 jsonrpc: "2.0",
-                id: "vscode",
+                id: "1",
                 method: "force",
                 params: params,
             })
@@ -369,16 +379,20 @@ export class Buildbot {
 
     async stopBuild() {
         const builders = await this.getBuilders();
-        const builds = await this.getBuilds("builds?state_string=created&state_string=building");
+        const builds = await this.getBuilds("builds?complete=false");
 
         if (!builds || !builds.length) {
             vscode.window.showInformationMessage("There are no running builds");
             return;
         }
 
+        for(const build of builds) {
+            build.builder_name = builders.find((b) => b.builderid === build.builderid)!.name;
+        }
+
         const picked = await vscode.window.showQuickPick(
             builds.map((b) => ({
-                label: `Build ${b.number} on '${builders.find((i) => i.builderid === b.builderid)!.name}'`,
+                label: `Build ${b.number} on '${b.builder_name}'`,
                 detail: `started at ${b.started_at.toLocaleTimeString()}`,
                 buildid: b.buildid,
             })),
@@ -398,7 +412,7 @@ export class Buildbot {
         if (
             await this.request(`builds/${picked.buildid}`, {
                 jsonrpc: "2.0",
-                id: "vscode",
+                id: "1",
                 method: "stop",
                 params: { reason: "Stopped in Visual Studio Code" },
             })

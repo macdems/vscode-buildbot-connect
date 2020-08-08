@@ -21,6 +21,7 @@ export interface Build {
     properties?: {}; // a dictionary of properties attached to build.
     results?: number; // the results of the build (see Build Result Codes), or None if not complete
     state_string: string; // a string giving detail on the state of the build.
+    builder_name?: string // [extension] builder name
 }
 
 export interface Builder {

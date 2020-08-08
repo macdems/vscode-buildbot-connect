@@ -28,13 +28,17 @@ This extension uses Buildbot REST API, so you need a properly configured Buildbo
 - `buildbot.allowSelf-signedCertificate`: you need to set it to `true` if your Buildbot is accessed through HTTPS with a self-signed certificate. Otherwise I recommend to leave to `false`.
 - `buildbot.userName`: if your buildbot web API requires login, specify the username here. You will be asked for a password during the first connection attempt and it will be stored securely. Only HTTP authorization and simple username/password authentication is supported.
 
-<!-- ## Known Issues
+## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension. -->
+If you have no right to access some sub-page, the plugin will keep asking you for a password.
 
 ## Release Notes
 
 Users appreciate release notes as you update your extension.
+
+### 0.1.1
+
+Bugfixes.
 
 ### 0.1.0
 
