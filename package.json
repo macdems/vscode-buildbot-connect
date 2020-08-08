@@ -1,14 +1,21 @@
 {
 	"name": "buildbot-connect",
-	"displayName": "Buildbo Connect",
+	"publisher": "maciejdems",
+	"displayName": "Buildbot Connect",
 	"description": "Provide connection with buildbot instance and allow to start manual builds",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"engines": {
 		"vscode": "^1.47.0"
 	},
 	"categories": [
 		"Other"
 	],
+	"homepage": "https://github.com/macdems/vsode-buildbot-connect",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/macdems/vsode-buildbot-connect.git"
+	},
+	"icon": "images/icon.png",
 	"main": "./out/extension.js",
 	"contributes": {
 		"configuration": {
@@ -31,34 +38,44 @@
 		},
 		"commands": [
 			{
-				"command": "buildbot-connect.openAllBuilders",
+				"command": "buildbot-connect.openBuildbot",
 				"category": "Buildbot",
-				"title": "Open All Builders in External Browser"
+				"title": "Open Buildbot Web Interface"
 			},
 			{
-				"command": "buildbot-connect.openBuilder",
+				"command": "buildbot-connect.listBuilders",
 				"category": "Buildbot",
-				"title": "Open Selected Builder in External Browser"
+				"title": "List Active Builders"
+			},
+			{
+				"command": "buildbot-connect.showLastBuilds",
+				"category": "Buildbot",
+				"title": "Show Last Builds"
 			},
 			{
 				"command": "buildbot-connect.forceBuild",
 				"category": "Buildbot",
 				"title": "Force a Build"
+			},
+			{
+				"command": "buildbot-connect.stopBuild",
+				"category": "Buildbot",
+				"title": "Stop Running Build"
 			}
 		]
 	},
 	"activationEvents": [
-		"onCommand:buildbot-connect.openAllBuilders",
-		"onCommand:buildbot-connect.openBuilder",
-		"onCommand:buildbot-connect.forceBuild"
+		"onCommand:buildbot-connect.openBuildbot",
+		"onCommand:buildbot-connect.listBuilders",
+		"onCommand:buildbot-connect.showLastBuilds",
+		"onCommand:buildbot-connect.forceBuild",
+		"onCommand:buildbot-connect.stopBuild"
 	],
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
 		"compile": "tsc -p ./",
 		"lint": "eslint src --ext ts",
 		"watch": "tsc -watch -p ./",
-		"pretest": "npm run compile && npm run lint",
-		"test": "node ./out/test/runTest.js",
 		"package": "vsce package",
 		"publish": "vsce publish"
 	},
