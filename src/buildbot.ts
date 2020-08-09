@@ -1,12 +1,11 @@
 import * as vscode from "vscode";
-import nodeFetch, { RequestInit, RequestInfo, BodyInit } from "node-fetch";
+import nodeFetch, { RequestInit, RequestInfo, BodyInit, Response } from "node-fetch";
 import { Agent as HttpsAgent, AgentOptions } from "https";
 import * as keytar from "keytar";
 import { URLSearchParams } from "url";
 
 import { computeAuth } from "./auth";
 import { Builder, Build, ForceField } from "./api";
-import { errorMonitor } from "events";
 
 const KEYTAR_SERVICE = "VSCode Buildbot Connect";
 
@@ -68,6 +67,7 @@ export class Buildbot {
         }
         this.password = await vscode.window.showInputBox({
             prompt: `Enter password for user '${this.user}' on '${this.url}'`,
+            ignoreFocusOut: true,
             password: true,
         });
         if (this.password) {
@@ -112,24 +112,18 @@ export class Buildbot {
                     return await resp.json();
                 }
 
-                if (!this.user || (resp.status !== 401 && resp.status !== 403)) {
-                    var message: string;
-                    try {
-                        const error = (await resp.json()).error;
-                        if (!error) {
-                            throw Error();
-                        }
-                        if (error.message instanceof String) {
-                            message = error.message;
-                        } else {
-                            message = Object.entries(error.message)
-                                .map((e) => `${e[0]}: ${e[1]}`)
-                                .join("; ");
-                        }
-                    } catch {
-                        throw Error(resp.statusText);
-                    }
-                    throw Error(message);
+                if (resp.status !== 401 && resp.status !== 403) {
+                    await this.throwRequestError(resp);
+                }
+
+                if (!this.user) {
+                    this.user = await vscode.window.showInputBox({
+                        prompt: `Enter Buildbot web UI user name on '${this.url}'`,
+                        ignoreFocusOut: true
+                    });
+                    if (!this.user) { await this.throwRequestError(resp); }
+                    vscode.workspace.getConfiguration("buildbot").update("userName", this.user);
+                    askPass = true;
                 }
 
                 if (askPass) {
@@ -143,12 +137,12 @@ export class Buildbot {
                 this.clearHeaders();
 
                 if (resp.status === 401) {
-                    this.headers["Authorization"] = computeAuth(resp, this.user, this.password, method ? method : "GET");
+                    this.headers["Authorization"] = computeAuth(resp, this.user!, this.password, method ? method : "GET");
                     resp = await this.fetch(`${this.url}/`, {
                         headers: this.headers,
                     });
                 } else {
-                    const auth = computeAuth(await this.fetch(`${this.url}/auth/login`), this.user, this.password);
+                    const auth = computeAuth(await this.fetch(`${this.url}/auth/login`), this.user!, this.password);
                     resp = await this.fetch(`${this.url}/auth/login`, {
                         headers: { Authorization: auth },
                         redirect: "manual",
@@ -164,6 +158,26 @@ export class Buildbot {
             }
         } catch (err) {
             vscode.window.showErrorMessage(`There was an error processing your request: ${err.message}`);
+        }
+    }
+
+    private async throwRequestError(resp: Response) {
+        var error;
+        try {
+            error = (await resp.json()).error;
+        } catch {
+            throw Error(resp.statusText);
+        }
+        if (!error) {
+            throw Error(resp.statusText);
+        }
+        if (error.message instanceof String) {
+            throw error;
+        }
+        else {
+            throw Object.entries(error.message)
+                .map((e) => `${e[0]}: ${e[1]}`)
+                .join("; ");
         }
     }
 
@@ -194,7 +208,10 @@ export class Buildbot {
                 label: b.name,
                 description: b.tags?.join(", "),
                 detail: b.description,
-            }))
+            })),
+            {
+                ignoreFocusOut: true,
+            }
         );
         if (picked) {
             return builders.find((b) => b.name === picked.label);
@@ -203,14 +220,28 @@ export class Buildbot {
 
     dispose() {}
 
-    private unconfigured() {
+    private async notConfigured() {
         if (!this.url) {
-            vscode.window.showWarningMessage(
-                "Buildbot Connect is not configured. Please enter configuration and define Buildbot URL..."
-            );
+            if (
+                await vscode.window.showWarningMessage(
+                    "Buildbot Connect is not configured. Please define Buildbot URL...",
+                    "Set Buildbot URL"
+                )
+            ) {
+                const url = await vscode.window.showInputBox({
+                    prompt: "Enter URL of your Buildbot web UI",
+                    ignoreFocusOut: true,
+                });
+                if (url !== undefined) {
+                    this.url = url;
+                    vscode.workspace.getConfiguration("buildbot").update("URL", url);
+                    return false;
+                }
+            }
             return true;
+        } else {
+            return false;
         }
-        return false;
     }
 
     constructor(private readonly context: vscode.ExtensionContext) {
@@ -236,7 +267,9 @@ export class Buildbot {
     }
 
     async openBuildbot() {
-        if (this.unconfigured()) { return; }
+        if (await this.notConfigured()) {
+            return;
+        }
         const pick = await vscode.window.showQuickPick(
             [
                 { label: "Home", page: "" },
@@ -253,7 +286,9 @@ export class Buildbot {
     }
 
     async listBuilders() {
-        if (this.unconfigured()) { return; }
+        if (await this.notConfigured()) {
+            return;
+        }
         const builder = await this.pickBuilder();
         if (builder) {
             vscode.env.openExternal(vscode.Uri.parse(`${this.url}/#/builders/${builder.builderid}`));
@@ -283,7 +318,9 @@ export class Buildbot {
     }
 
     async showLastBuilds() {
-        if (this.unconfigured()) { return; }
+        if (await this.notConfigured()) {
+            return;
+        }
         const builders = await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
@@ -299,7 +336,10 @@ export class Buildbot {
                     ? `Last build on ${b.last_build.complete_at?.toLocaleString()} (${b.last_build.state_string})`
                     : undefined,
                 last_build: b.last_build,
-            }))
+            })),
+            {
+                ignoreFocusOut: true,
+            }
         );
         if (pick && pick.last_build) {
             vscode.env.openExternal(
@@ -309,7 +349,9 @@ export class Buildbot {
     }
 
     async forceBuild() {
-        if (this.unconfigured()) { return; }
+        if (await this.notConfigured()) {
+            return;
+        }
         const schedulers = (await this.request("forceschedulers")).forceschedulers;
         if (schedulers.length === 0) {
             vscode.window.showInformationMessage("No ForceScheduler schedulers are defined in your Buildbot");
@@ -317,13 +359,19 @@ export class Buildbot {
         }
         let scheduler = schedulers[0];
         if (schedulers.length > 1) {
-            scheduler = await vscode.window.showQuickPick(schedulers, { placeHolder: "Select force scheduler to activate" });
+            scheduler = await vscode.window.showQuickPick(schedulers, {
+                placeHolder: "Select force scheduler to activate",
+                ignoreFocusOut: true,
+            });
             if (scheduler === undefined) {
                 return;
             }
         }
 
-        const bn = await vscode.window.showQuickPick(scheduler.builder_names, { placeHolder: "Select builder to start" });
+        const bn = await vscode.window.showQuickPick(scheduler.builder_names, {
+            placeHolder: "Select builder to start",
+            ignoreFocusOut: true,
+        });
         const builder = (await this.getBuilders()).find((b) => b.name === bn)!;
 
         const fields = [...collect_fields(scheduler.all_fields)].filter((f) => f.fullName !== "username" && f.fullName !== "owner");
@@ -359,7 +407,10 @@ export class Buildbot {
             picks.splice(0, 0, start);
 
             while (true) {
-                const pick = await vscode.window.showQuickPick(picks, { placeHolder: `Forcing build on '${builder.name}'` });
+                const pick = await vscode.window.showQuickPick(picks, {
+                    placeHolder: `Forcing build on '${builder.name}'`,
+                    ignoreFocusOut: true,
+                });
                 if (!pick) {
                     return;
                 }
@@ -368,6 +419,7 @@ export class Buildbot {
                 }
                 const description = await vscode.window.showInputBox({
                     prompt: `Enter ${pick.original_label}...`,
+                    ignoreFocusOut: true,
                 });
                 if (description !== undefined) {
                     pick.description = description;
@@ -398,7 +450,9 @@ export class Buildbot {
     }
 
     async stopBuild() {
-        if (this.unconfigured()) { return; }
+        if (await this.notConfigured()) {
+            return;
+        }
         const builders = await this.getBuilders();
         const builds = await this.getBuilds("builds?complete=false");
 
@@ -417,7 +471,7 @@ export class Buildbot {
                 detail: `started at ${b.started_at.toLocaleTimeString()}`,
                 buildid: b.buildid,
             })),
-            { placeHolder: "Select a build to stop..." }
+            { placeHolder: "Select a build to stop...", ignoreFocusOut: true }
         );
         if (!picked) {
             return;
@@ -425,6 +479,7 @@ export class Buildbot {
 
         // const reason = await vscode.window.showInputBox({
         //     prompt: "Give the reason why the build is stopped",
+        // ignoreFocusOut: true,
         // });
         // if (reason === undefined) {
         //     return;

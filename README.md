@@ -34,7 +34,9 @@ If you have no right to access some sub-page, the plugin will keep asking you fo
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
+### 0.3.0
+
+Ask for configuration if no Buildbot URL is configured.
 
 ### 0.2.0
 
