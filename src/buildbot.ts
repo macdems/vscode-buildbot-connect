@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import nodeFetch, { RequestInit, RequestInfo, BodyInit } from "node-fetch";
-import { Agent as HttpsAgent } from "https";
+import { Agent as HttpsAgent, AgentOptions } from "https";
 import * as keytar from "keytar";
 import { URLSearchParams } from "url";
 
@@ -31,9 +31,19 @@ export class Buildbot {
 
     private password: string | null | undefined;
 
-    private headers: { [key: string]: string } | undefined;
+    private headers: { [key: string]: string } = {};
 
     private httpsAgent: HttpsAgent | undefined;
+
+    private makeAgent(options: AgentOptions = {}) {
+        options.rejectUnauthorized = !vscode.workspace.getConfiguration("buildbot").get("allowSelf-signedCertificate", false);
+        options.keepAlive = true;
+        this.httpsAgent = new HttpsAgent(options);
+    }
+
+    private clearHeaders() {
+        this.headers = { Connection: "Keep-Alive" };
+    }
 
     private refreshConfig() {
         const config = vscode.workspace.getConfiguration("buildbot");
@@ -43,13 +53,9 @@ export class Buildbot {
             this.url = url;
             this.user = user;
             this.password = undefined;
-            this.headers = undefined;
+            this.clearHeaders();
         }
-        if (config.get("allowSelf-signedCertificate", false)) {
-            this.httpsAgent = new HttpsAgent({ rejectUnauthorized: false });
-        } else {
-            this.httpsAgent = undefined;
-        }
+        this.makeAgent();
     }
 
     private async readPassword() {
@@ -117,8 +123,8 @@ export class Buildbot {
                             message = error.message;
                         } else {
                             message = Object.entries(error.message)
-                            .map((e) => `${e[0]}: ${e[1]}`)
-                            .join("; ");
+                                .map((e) => `${e[0]}: ${e[1]}`)
+                                .join("; ");
                         }
                     } catch {
                         throw Error(resp.statusText);
@@ -134,7 +140,7 @@ export class Buildbot {
                 }
                 askPass = true;
 
-                this.headers = {};
+                this.clearHeaders();
 
                 if (resp.status === 401) {
                     this.headers["Authorization"] = computeAuth(resp, this.user, this.password, method ? method : "GET");
@@ -157,7 +163,7 @@ export class Buildbot {
                 }
             }
         } catch (err) {
-            vscode.window.showInformationMessage(`There was an error processing your request: ${err.message}`);
+            vscode.window.showErrorMessage(`There was an error processing your request: ${err.message}`);
         }
     }
 
@@ -197,6 +203,16 @@ export class Buildbot {
 
     dispose() {}
 
+    private unconfigured() {
+        if (!this.url) {
+            vscode.window.showWarningMessage(
+                "Buildbot Connect is not configured. Please enter configuration and define Buildbot URL..."
+            );
+            return true;
+        }
+        return false;
+    }
+
     constructor(private readonly context: vscode.ExtensionContext) {
         this.refreshConfig();
         vscode.workspace.onDidChangeConfiguration(() => {
@@ -220,6 +236,7 @@ export class Buildbot {
     }
 
     async openBuildbot() {
+        if (this.unconfigured()) { return; }
         const pick = await vscode.window.showQuickPick(
             [
                 { label: "Home", page: "" },
@@ -236,6 +253,7 @@ export class Buildbot {
     }
 
     async listBuilders() {
+        if (this.unconfigured()) { return; }
         const builder = await this.pickBuilder();
         if (builder) {
             vscode.env.openExternal(vscode.Uri.parse(`${this.url}/#/builders/${builder.builderid}`));
@@ -253,7 +271,7 @@ export class Buildbot {
                 message: `getting last build for builder '${b.name}'...`,
             });
             const builds = await this.getBuilderBuilds(b, {
-                order: "-started_at",
+                order: "-number",
                 complete: true,
                 limit: 1,
             });
@@ -265,6 +283,7 @@ export class Buildbot {
     }
 
     async showLastBuilds() {
+        if (this.unconfigured()) { return; }
         const builders = await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
@@ -290,6 +309,7 @@ export class Buildbot {
     }
 
     async forceBuild() {
+        if (this.unconfigured()) { return; }
         const schedulers = (await this.request("forceschedulers")).forceschedulers;
         if (schedulers.length === 0) {
             vscode.window.showInformationMessage("No ForceScheduler schedulers are defined in your Buildbot");
@@ -378,6 +398,7 @@ export class Buildbot {
     }
 
     async stopBuild() {
+        if (this.unconfigured()) { return; }
         const builders = await this.getBuilders();
         const builds = await this.getBuilds("builds?complete=false");
 
@@ -386,7 +407,7 @@ export class Buildbot {
             return;
         }
 
-        for(const build of builds) {
+        for (const build of builds) {
             build.builder_name = builders.find((b) => b.builderid === build.builderid)!.name;
         }
 

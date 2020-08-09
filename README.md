@@ -36,6 +36,10 @@ If you have no right to access some sub-page, the plugin will keep asking you fo
 
 Users appreciate release notes as you update your extension.
 
+### 0.2.0
+
+Add keep-alive to HTTP connection. Some operations are faster.
+
 ### 0.1.1
 
 Bugfixes.

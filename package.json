@@ -3,7 +3,7 @@
 	"publisher": "maciejdems",
 	"displayName": "Buildbot Connect",
 	"description": "Provide connection with buildbot instance and allow to start manual builds",
-	"version": "0.1.1",
+	"version": "0.2.0",
 	"engines": {
 		"vscode": "^1.47.0"
 	},
@@ -55,7 +55,7 @@
 			{
 				"command": "buildbot-connect.forceBuild",
 				"category": "Buildbot",
-				"title": "Force a Build"
+				"title": "Force Build"
 			},
 			{
 				"command": "buildbot-connect.stopBuild",
