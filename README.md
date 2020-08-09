@@ -36,16 +36,17 @@ If you have no right to access some sub-page, the plugin will keep asking you fo
 
 ### 0.3.0
 
-Ask for configuration if no Buildbot URL is configured.
+- Ask for configuration if no Buildbot URL is configured.
+- Force improvements.
 
 ### 0.2.0
 
-Add keep-alive to HTTP connection. Some operations are faster.
+- Add keep-alive to HTTP connection. Some operations are faster.
 
 ### 0.1.1
 
-Bugfixes.
+- Bugfixes.
 
 ### 0.1.0
 
-Initial release of Buildbot Connect.
+- Initial release of Buildbot Connect.

@@ -116,12 +116,12 @@ export class Buildbot {
                     await this.throwRequestError(resp);
                 }
 
-                if (!this.user) {
+                while (!this.user) {
                     this.user = await vscode.window.showInputBox({
                         prompt: `Enter Buildbot web UI user name on '${this.url}'`,
                         ignoreFocusOut: true
                     });
-                    if (!this.user) { await this.throwRequestError(resp); }
+                    if (this.user === undefined) { return; }
                     vscode.workspace.getConfiguration("buildbot").update("userName", this.user);
                     askPass = true;
                 }
@@ -137,12 +137,12 @@ export class Buildbot {
                 this.clearHeaders();
 
                 if (resp.status === 401) {
-                    this.headers["Authorization"] = computeAuth(resp, this.user!, this.password, method ? method : "GET");
+                    this.headers["Authorization"] = computeAuth(resp, this.user, this.password, method ? method : "GET");
                     resp = await this.fetch(`${this.url}/`, {
                         headers: this.headers,
                     });
                 } else {
-                    const auth = computeAuth(await this.fetch(`${this.url}/auth/login`), this.user!, this.password);
+                    const auth = computeAuth(await this.fetch(`${this.url}/auth/login`), this.user, this.password);
                     resp = await this.fetch(`${this.url}/auth/login`, {
                         headers: { Authorization: auth },
                         redirect: "manual",
@@ -418,7 +418,8 @@ export class Buildbot {
                     break;
                 }
                 const description = await vscode.window.showInputBox({
-                    prompt: `Enter ${pick.original_label}...`,
+                    prompt: `Enter ${pick.original_label}`,
+                    value: pick.description,
                     ignoreFocusOut: true,
                 });
                 if (description !== undefined) {
