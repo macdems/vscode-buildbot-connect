@@ -3,7 +3,7 @@
 	"publisher": "maciejdems",
 	"displayName": "Buildbot Connect",
 	"description": "Provide connection with buildbot instance and allow to start manual builds",
-	"version": "0.3.1",
+	"version": "0.3.2",
 	"engines": {
 		"vscode": "^1.47.0"
 	},
