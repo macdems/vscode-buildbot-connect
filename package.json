@@ -3,7 +3,7 @@
 	"publisher": "maciejdems",
 	"displayName": "Buildbot Connect",
 	"description": "Provide connection with buildbot instance and allow to start manual builds",
-	"version": "0.3.2",
+	"version": "0.3.3",
 	"engines": {
 		"vscode": "^1.47.0"
 	},
@@ -90,7 +90,6 @@
 		"@types/vscode": "^1.47.0",
 		"@typescript-eslint/eslint-plugin": "^2.30.0",
 		"@typescript-eslint/parser": "^2.30.0",
-		"@zeit/webpack-asset-relocator-loader": "^0.7.2",
 		"eslint": "^6.8.0",
 		"glob": "^7.1.6",
 		"mocha": "^7.1.2",

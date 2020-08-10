@@ -18,8 +18,9 @@ const config = {
     },
     devtool: 'source-map',
     externals: {
-        vscode: 'commonjs vscode' // the vscode-module is created on-the-fly and must be excluded.
+        vscode: 'commonjs vscode', // the vscode-module is created on-the-fly and must be excluded.
         // Add other modules that cannot be webpack'ed, 📖 -> https://webpack.js.org/configuration/externals/
+        keytar: "commonjs keytar"
     },
     resolve: {
         // support reading TypeScript and JavaScript files, 📖 -> https://github.com/TypeStrong/ts-loader
@@ -35,16 +36,6 @@ const config = {
                         loader: 'ts-loader'
                     }
                 ]
-            },
-            {
-                test: /\.node$/,
-                parser: { amd: false },
-                use: {
-                    loader: '@zeit/webpack-asset-relocator-loader',
-                    options: {
-                        outputAssetBase: 'libs'
-                    },
-                },
             }
         ]
     }

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## 0.3.3
+
+- Fixed problems with keytar on Windows.
+
 ## 0.3.2
 
 - Move release notes to CHANGELOG.md.
