@@ -22,7 +22,7 @@ For example if there is an image subfolder under your extension project workspac
 
 ## Extension Settings
 
-This extension uses Buildbot REST API, so you need a properly configured Buildbot web interface. In order to use it, you need to specify the following settings (it is recommended to set them in the workspace of folder scope):
+This extension uses Buildbot REST API, so you need a properly configured Buildbot web interface. In order to use it, you need to specify the following settings (it is recommended to set them in the workspace or folder scope):
 
 - `buildbot.URL`: URL address of your Buildbot web interface.
 - `buildbot.allowSelf-signedCertificate`: you need to set it to `true` if your Buildbot is accessed through HTTPS with a self-signed certificate. Otherwise I recommend to leave to `false`.
@@ -33,6 +33,10 @@ This extension uses Buildbot REST API, so you need a properly configured Buildbo
 If you have no right to access some sub-page, the plugin will keep asking you for a password.
 
 ## Release Notes
+
+### 0.3.1
+
+- Bundle with webpack.
 
 ### 0.3.0
 
