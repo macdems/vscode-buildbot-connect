@@ -2,9 +2,14 @@
 
 ## [Unreleased]
 
+## 0.3.4
+
+- Update dependencies
+- Fix authentication issue
+
 ## 0.3.3
 
-- Fixed problems with keytar on Windows.
+- Fix problems with keytar on Windows.
 
 ## 0.3.2
 

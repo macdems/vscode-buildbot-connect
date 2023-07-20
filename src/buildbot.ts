@@ -157,14 +157,14 @@ export class Buildbot {
                 }
             }
         } catch (err) {
-            vscode.window.showErrorMessage(`There was an error processing your request: ${err.message}`);
+            vscode.window.showErrorMessage(`There was an error processing your request: ${(<any> err).message}`);
         }
     }
 
     private async throwRequestError(resp: Response) {
         var error;
         try {
-            error = (await resp.json()).error;
+            error = (<any> await resp.json()).error;
         } catch {
             throw Error(resp.statusText);
         }
@@ -182,11 +182,11 @@ export class Buildbot {
     }
 
     private async getBuilders(): Promise<Builder[]> {
-        return (await this.request("builders")).builders.filter((b: Builder) => b.masterids.length);
+        return (<any> await this.request("builders")).builders.filter((b: Builder) => b.masterids.length);
     }
 
     private async getBuilds(endpoint: string): Promise<Build[]> {
-        const builds = (await this.request(endpoint)).builds;
+        const builds = (<any> await this.request(endpoint)).builds;
         for (const build of builds) {
             build.started_at = new Date(build.started_at * 1000);
             if (build.complete_at) {
@@ -352,7 +352,7 @@ export class Buildbot {
         if (await this.notConfigured()) {
             return;
         }
-        const schedulers = (await this.request("forceschedulers")).forceschedulers;
+        const schedulers = (<any> await this.request("forceschedulers")).forceschedulers;
         if (schedulers.length === 0) {
             vscode.window.showInformationMessage("No ForceScheduler schedulers are defined in your Buildbot");
             return;

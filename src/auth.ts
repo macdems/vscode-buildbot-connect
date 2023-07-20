@@ -59,7 +59,7 @@ export function computeAuth(
 
   const scheme = header.split(/\s/)[0];
 
-  if (scheme === "Basic") {
+  if (scheme.toLowerCase() === "basic") {
     return "Basic " + base64.encode(`${user}:${password}`);
   }
 
