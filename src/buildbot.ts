@@ -1,13 +1,10 @@
 import * as vscode from "vscode";
 import nodeFetch, { RequestInit, RequestInfo, BodyInit, Response } from "node-fetch";
 import { Agent as HttpsAgent, AgentOptions } from "https";
-import * as keytar from "keytar";
 import { URLSearchParams } from "url";
 
 import { computeAuth } from "./auth";
 import { Builder, Build, ForceField } from "./api";
-
-const KEYTAR_SERVICE = "VSCode Buildbot Connect";
 
 function* collect_fields(fields: ForceField[] | undefined): Generator<ForceField> {
     if (fields === undefined) {
@@ -58,10 +55,10 @@ export class Buildbot {
     }
 
     private async readPassword() {
-        const account = `${this.url}:${this.user}`;
+        const account = `buildbot-connect:${this.url}:${this.user}`;
         if (this.password === undefined) {
-            this.password = await keytar.getPassword(KEYTAR_SERVICE, account);
-            if (this.password !== null) {
+            this.password = await this.context.secrets.get(account);
+            if (this.password !== undefined) {
                 return;
             }
         }
@@ -71,7 +68,7 @@ export class Buildbot {
             password: true,
         });
         if (this.password) {
-            await keytar.setPassword(KEYTAR_SERVICE, account, this.password);
+            await this.context.secrets.store(account, this.password);
         } else if (this.password === undefined) {
             this.password = null;
         }

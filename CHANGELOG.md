@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## 0.3.5
+
+- Switch from keytar to SecretStorage
+
 ## 0.3.4
 
 - Update dependencies
